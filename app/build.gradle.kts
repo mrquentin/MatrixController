@@ -83,5 +83,9 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
+    // ui-test-manifest supplies the ComponentActivity that createComposeRule() launches, and it
+    // MUST stay on debugImplementation so the activity lands in the *app* manifest. Moving it to
+    // androidTestImplementation puts it in the test package instead, and instrumentation refuses
+    // to start it: "Intent in process <app> resolved to different process <app>.test".
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

@@ -27,8 +27,13 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
-      # assembleDebugAndroidTest keeps the instrumented sources compiling in this fast job;
-      # the `instrumented` job below actually runs them on an emulator.
+      # assembleDebugAndroidTest compiles the Compose UI tests so they cannot rot. They are not
+      # *run* here: minSdk 37 means the only available system image is the full
+      # `android-37.0;google_apis` one — no ATD (CI-optimised) image exists above API 36 — and on
+      # hosted runners it either exceeded the boot timeout or came up with /sdcard unmounted and
+      # the app APK not yet installed, which fails every test. Run them locally instead:
+      #     ./gradlew connectedDebugAndroidTest
+      # Verified green on an API 37 emulator and on a physical Pixel 10 Pro XL (API 37).
       - run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest
       # v4 targets the deprecated Node 20 runtime; v7 is the current Node 24 major.
       - uses: actions/upload-artifact@v7
@@ -38,52 +43,3 @@ jobs:
           path: |
             app/build/reports/**
             app/build/outputs/apk/debug/*.apk
-
-  instrumented:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: '25'
-      - uses: gradle/actions/setup-gradle@v6
-        with:
-          cache-read-only: true
-      # The emulator needs KVM, which ubuntu-latest has but does not expose to non-root by default.
-      - name: Enable KVM
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
-            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-      - name: Compose UI tests
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          # Minor-versioned naming: `platforms;android-37` does not exist, only `android-37.0`.
-          # `system-images;android-37.0;google_apis;x86_64` is the matching image.
-          api-level: '37.0'
-          system-image-api-level: '37.0'
-          target: google_apis
-          arch: x86_64
-          # No ATD (CI-optimised) image exists above API 36, so this is the full image and it
-          # boots slowly on a hosted runner; the 600 s default is not enough.
-          emulator-boot-timeout: 1800
-          ram-size: 4096M
-          disk-size: 8G
-          disable-animations: true
-          disable-spellchecker: true
-          # The runner's adb reports the device ready before /sdcard is mounted, which made
-          # Gradle install the test APK too early and every test fail to resolve its activity.
-          # Block until the boot really completed, then run.
-          script: |
-            adb wait-for-device
-            timeout 600 adb shell 'while [ "$(getprop sys.boot_completed)" != 1 ]; do sleep 2; done'
-            adb shell 'while [ "$(getprop init.svc.bootanim)" = running ]; do sleep 2; done'
-            adb shell ls /sdcard > /dev/null
-            ./gradlew connectedDebugAndroidTest
-      - uses: actions/upload-artifact@v7
-        if: ${{ !cancelled() }}
-        with:
-          name: instrumented-reports
-          path: app/build/reports/androidTests/**
