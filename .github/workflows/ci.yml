@@ -28,7 +28,8 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
       - run: ./gradlew testDebugUnitTest lintDebug assembleDebug
-      - uses: actions/upload-artifact@v4
+      # v4 targets the deprecated Node 20 runtime; v7 is the current Node 24 major.
+      - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
           name: reports
