@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The Matrix Portal M4 firmware cannot serve TLS: WiFiNINA provides no WiFiSSLServer,
+  so the board's API is plain HTTP on the local network. Cleartext must therefore be
+  permitted for the arbitrary user-entered LAN address.
+-->
+<network-security-config xmlns:tools="http://schemas.android.com/tools">
+    <base-config cleartextTrafficPermitted="true" tools:ignore="InsecureBaseConfiguration">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

@@ -1,0 +1,8 @@
+* text=auto eol=lf
+
+# The Gradle wrapper script is executed by /bin/sh on CI: it must never gain CRLF.
+gradlew text eol=lf
+gradlew.bat text eol=crlf
+
+*.jar binary
+*.webp binary

@@ -1,0 +1,16 @@
+# Add project specific R8 rules here.
+# AGP will combine all keep rule files in src/main/keepRules to pass to R8
+#
+# For more details, see
+#   https://d.android.com/r/tools/r8/keep-rules
+
+# AGP 9 defaults android.r8.strictFullModeForKeepRules=true, so `-keep class X` no
+# longer implicitly keeps members: every member reached only by reflection or by a
+# generated serializer must be named explicitly.
+
+# Navigation Compose resolves type-safe routes through kotlinx.serialization at runtime.
+-keep class com.mrquentinet.matrixcontroller.ui.navigation.** { *; }
+
+# DataStore records are deserialized by generated serializers reached from a KSerializer field.
+-keep class com.mrquentinet.matrixcontroller.data.store.StoredBoard { *; }
+-keep class com.mrquentinet.matrixcontroller.data.store.StoredBoard$* { *; }

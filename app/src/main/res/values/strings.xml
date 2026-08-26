@@ -1,0 +1,100 @@
+<resources>
+    <string name="app_name">Matrix Controller</string>
+
+    <!-- Boards screen -->
+    <string name="boards_title">Boards</string>
+    <plurals name="boards_subtitle">
+        <item quantity="one">%1$d paired</item>
+        <item quantity="other">%1$d paired</item>
+    </plurals>
+    <string name="action_add_board">Add board</string>
+    <string name="boards_empty_title">No boards yet</string>
+    <string name="boards_empty_body">Add your Matrix Portal M4 by name and LAN address to get started.</string>
+    <string name="action_delete">Delete</string>
+    <string name="board_removed">%1$s removed</string>
+    <string name="action_undo">Undo</string>
+
+    <!-- Board row status line -->
+    <string name="status_probing">Checking\u2026</string>
+    <string name="status_offline">Unreachable</string>
+    <string name="status_ready_to_pair">Ready to pair</string>
+    <string name="status_not_paired">Not paired \u2014 press UP on the board</string>
+    <string name="status_revoked">Pairing revoked \u2014 pair again</string>
+    <string name="status_online_app">Online \u00b7 %1$s</string>
+    <string name="status_waiting_clock">Waiting for the board\u2019s clock</string>
+    <string name="status_online">Online</string>
+
+    <!-- Add board dialog -->
+    <string name="add_board_title">Add board</string>
+    <string name="field_name">Name</string>
+    <string name="field_name_placeholder">Living room matrix</string>
+    <string name="field_address">Address</string>
+    <string name="field_address_placeholder">192.168.1.50</string>
+    <string name="field_address_support">IP or hostname, optionally host:port (default 80)</string>
+    <string name="action_add">Add</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="error_name_required">Enter a name for this board</string>
+    <string name="error_invalid_address">Enter an IP or hostname, e.g. 192.168.1.50 or matrix.local:8080</string>
+    <string name="error_duplicate_address">A board with that address already exists</string>
+
+    <!-- Board screen -->
+    <string name="action_back">Back</string>
+    <string name="action_refresh">Refresh</string>
+    <string name="action_board_info">Board info</string>
+    <string name="pair_title">Pair with this board</string>
+    <string name="pair_body">Press the UP button on the board. Its LED blinks for 60 seconds \u2014 tap Pair during that window.</string>
+    <string name="pair_window_open">Pairing window open \u00b7 %1$d s left</string>
+    <string name="action_pair">Pair</string>
+    <string name="action_check_again">Check again</string>
+    <string name="app_active">Active</string>
+
+    <!-- Info screen -->
+    <string name="info_title">Board info</string>
+    <string name="info_card_status">Status</string>
+    <string name="info_card_cpu">CPU</string>
+    <string name="info_card_ram">RAM</string>
+    <string name="info_firmware">Firmware</string>
+    <string name="info_uptime">Uptime</string>
+    <string name="info_signal">Signal</string>
+    <string name="info_paired_clients">Paired clients</string>
+    <string name="info_board_time">Board time</string>
+    <string name="info_not_synced">Not synced</string>
+    <string name="info_metrics_disabled">Metrics are disabled in this firmware build.</string>
+    <string name="info_unknown">\u2014</string>
+    <string name="paired_clients_value">%1$d of 4</string>
+    <string name="uptime_days">%1$dd %2$02dh %3$02dm</string>
+    <string name="uptime_hours">%1$dh %2$02dm</string>
+    <string name="uptime_minutes">%1$dm %2$02ds</string>
+    <string name="signal_value">%1$d dBm \u00b7 %2$s</string>
+    <string name="signal_excellent">Excellent</string>
+    <string name="signal_good">Good</string>
+    <string name="signal_fair">Fair</string>
+    <string name="signal_weak">Weak</string>
+    <string name="cpu_loop_rate">Loop rate</string>
+    <string name="cpu_loop_rate_value">%1$d Hz</string>
+    <string name="cpu_busy">Busy</string>
+    <string name="cpu_busy_value">%1$.1f %%</string>
+    <string name="cpu_requests">Requests served</string>
+    <string name="cpu_request_time">Request avg/max</string>
+    <string name="cpu_auth_time">Auth avg/max</string>
+    <string name="micros_pair">%1$d / %2$d \u00b5s</string>
+    <string name="ram_heap_used">Heap used</string>
+    <string name="ram_static">Static</string>
+    <string name="ram_stack_peak">Stack peak</string>
+    <string name="ram_free_now">Free now</string>
+    <string name="ram_min_free_ever">Min free ever</string>
+    <string name="kib_value">%1$.1f KiB</string>
+
+    <!-- Errors -->
+    <string name="error_unreachable">Board unreachable. Check that it is powered on and on this network.</string>
+    <string name="error_pairing_closed">The pairing window is closed. Press UP on the board, then try again.</string>
+    <string name="error_too_many_clients">The board already has 4 paired clients. Revoke one on the board first.</string>
+    <string name="error_credentials_rejected">The board rejected these credentials. Pair again.</string>
+    <string name="error_clock_skew">Your phone\u2019s clock is more than 60 seconds off the board\u2019s. Enable automatic date &amp; time.</string>
+    <string name="error_replay_rejected">The board rejected a repeated request. Try again.</string>
+    <string name="error_board_clock_unavailable">The board has no network time yet. Try again in a moment.</string>
+    <string name="error_endpoint_missing">This firmware build does not provide that endpoint.</string>
+    <string name="error_not_paired">This board is not paired yet.</string>
+    <string name="error_server">The board returned an error (%1$d %2$s).</string>
+    <string name="error_malformed">The board sent a response the app could not read.</string>
+</resources>
