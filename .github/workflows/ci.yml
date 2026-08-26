@@ -66,6 +66,11 @@ jobs:
           system-image-api-level: '37.0'
           target: google_apis
           arch: x86_64
+          # No ATD (CI-optimised) image exists above API 36, so this is the full image and it
+          # boots slowly on a hosted runner; the 600 s default is not enough.
+          emulator-boot-timeout: 1800
+          ram-size: 4096M
+          disk-size: 8G
           disable-animations: true
           script: ./gradlew connectedDebugAndroidTest
       - uses: actions/upload-artifact@v7
