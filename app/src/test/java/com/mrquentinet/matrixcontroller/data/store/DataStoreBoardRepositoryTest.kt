@@ -16,12 +16,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 
-/** Test double: keeps the repository's behaviour observable without an Android Keystore. */
-private class PlaintextSecretCipher : SecretCipher {
-    override fun seal(plaintext: String): String = "sealed:$plaintext"
-    override fun open(sealed: String): String? = sealed.removePrefix("sealed:")
-}
-
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class DataStoreBoardRepositoryTest {
 

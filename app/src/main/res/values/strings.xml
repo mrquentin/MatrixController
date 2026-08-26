@@ -35,6 +35,8 @@
     <string name="action_cancel">Cancel</string>
     <string name="error_name_required">Enter a name for this board</string>
     <string name="error_invalid_address">Enter an IP or hostname, e.g. 192.168.1.50 or matrix.local:8080</string>
+    <string name="action_continue">Continue</string>
+    <string name="add_board_found">Found %1$s \u00b7 firmware %2$s</string>
     <string name="error_duplicate_address">A board with that address already exists</string>
 
     <!-- Board screen -->

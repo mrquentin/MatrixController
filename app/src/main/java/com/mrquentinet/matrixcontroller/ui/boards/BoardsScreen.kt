@@ -119,12 +119,15 @@ fun BoardsScreen(
         }
     }
 
-    if (state.addDialogVisible) {
+    state.addBoard?.let { add ->
         AddBoardDialog(
-            nameError = state.addNameError,
-            addressError = state.addAddressError,
+            state = add,
+            onNameChange = viewModel::onAddNameChange,
+            onAddressChange = viewModel::onAddAddressChange,
+            onCheck = viewModel::checkBoard,
+            onPair = viewModel::pairAndAdd,
+            onRecheck = viewModel::recheckPairingWindow,
             onDismiss = viewModel::dismissAddDialog,
-            onConfirm = viewModel::addBoard,
         )
     }
 }
