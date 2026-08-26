@@ -72,7 +72,16 @@ jobs:
           ram-size: 4096M
           disk-size: 8G
           disable-animations: true
-          script: ./gradlew connectedDebugAndroidTest
+          disable-spellchecker: true
+          # The runner's adb reports the device ready before /sdcard is mounted, which made
+          # Gradle install the test APK too early and every test fail to resolve its activity.
+          # Block until the boot really completed, then run.
+          script: |
+            adb wait-for-device
+            timeout 600 adb shell 'while [ "$(getprop sys.boot_completed)" != 1 ]; do sleep 2; done'
+            adb shell 'while [ "$(getprop init.svc.bootanim)" = running ]; do sleep 2; done'
+            adb shell ls /sdcard > /dev/null
+            ./gradlew connectedDebugAndroidTest
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
