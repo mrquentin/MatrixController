@@ -3,6 +3,12 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!--
+      Android 17 (API 37) blocks all outbound LAN traffic by default for apps targeting API 37+.
+      Every board call is local-network traffic, so this is requested at runtime before the app
+      ever attempts one (see LocalNetworkPermissionGate).
+    -->
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
 
     <application
         android:name=".MatrixControllerApplication"

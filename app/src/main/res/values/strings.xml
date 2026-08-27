@@ -1,6 +1,13 @@
 <resources>
     <string name="app_name">Matrix Controller</string>
 
+    <!-- Local network permission gate (Android 17 / API 37) -->
+    <string name="local_network_permission_title">Local network access needed</string>
+    <string name="local_network_permission_body">Matrix Controller needs local network access to find and control your Matrix Portal M4 on this Wi-Fi network.</string>
+    <string name="local_network_permission_denied_body">Local network access was denied. Open this app\u2019s settings and allow local network access to continue.</string>
+    <string name="action_grant_access">Grant access</string>
+    <string name="action_open_settings">Open settings</string>
+
     <!-- Boards screen -->
     <string name="boards_title">Boards</string>
     <plurals name="boards_subtitle">
