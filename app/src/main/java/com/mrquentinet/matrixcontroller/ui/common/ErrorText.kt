@@ -22,6 +22,10 @@ fun BoardError.message(resolve: (Int, Array<out Any>) -> String): String = when 
         resolve(R.string.error_board_clock_unavailable, emptyArray())
     BoardError.EndpointMissing -> resolve(R.string.error_endpoint_missing, emptyArray())
     BoardError.NotPaired -> resolve(R.string.error_not_paired, emptyArray())
+    BoardError.InvalidSettingValue -> resolve(R.string.error_invalid_setting_value, emptyArray())
+    BoardError.NoRecognizedSettings ->
+        resolve(R.string.error_no_recognized_settings, emptyArray())
+    BoardError.UnknownAppIndex -> resolve(R.string.error_unknown_app_index, emptyArray())
     is BoardError.Server -> resolve(R.string.error_server, arrayOf<Any>(httpCode, code ?: ""))
     is BoardError.Malformed -> resolve(R.string.error_malformed, emptyArray())
 }

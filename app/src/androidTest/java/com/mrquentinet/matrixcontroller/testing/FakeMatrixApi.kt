@@ -1,5 +1,6 @@
 package com.mrquentinet.matrixcontroller.testing
 
+import com.mrquentinet.matrixcontroller.domain.AppSettingSchema
 import com.mrquentinet.matrixcontroller.domain.Board
 import com.mrquentinet.matrixcontroller.domain.BoardApp
 import com.mrquentinet.matrixcontroller.domain.BoardApps
@@ -10,6 +11,7 @@ import com.mrquentinet.matrixcontroller.domain.CpuMetrics
 import com.mrquentinet.matrixcontroller.domain.DeviceInfo
 import com.mrquentinet.matrixcontroller.domain.MatrixApi
 import com.mrquentinet.matrixcontroller.domain.RamMetrics
+import com.mrquentinet.matrixcontroller.domain.SettingValue
 
 val TEST_CREDENTIALS = BoardCredentials("0123456789abcdef", "ab".repeat(32))
 
@@ -31,6 +33,9 @@ class FakeMatrixApi : MatrixApi {
     var setActiveApp: (Int) -> BoardApp = { index -> DEFAULT_APPS[index] }
     var status: () -> BoardStatus = { DEFAULT_STATUS }
     var metrics: () -> BoardMetrics? = { DEFAULT_METRICS }
+    var appSettings: (Int) -> Map<String, SettingValue> = { emptyMap() }
+    var updateAppSettings: (Int, Map<String, SettingValue>) -> Map<String, SettingValue> =
+        { _, changes -> changes }
 
     val calls = mutableListOf<String>()
 
@@ -72,6 +77,27 @@ class FakeMatrixApi : MatrixApi {
     override suspend fun metrics(board: Board, credentials: BoardCredentials): BoardMetrics? {
         calls += "metrics"
         return metrics.invoke()
+    }
+
+    override suspend fun appSettings(
+        board: Board,
+        credentials: BoardCredentials,
+        index: Int,
+        schema: List<AppSettingSchema>,
+    ): Map<String, SettingValue> {
+        calls += "appSettings $index"
+        return appSettings.invoke(index)
+    }
+
+    override suspend fun updateAppSettings(
+        board: Board,
+        credentials: BoardCredentials,
+        index: Int,
+        schema: List<AppSettingSchema>,
+        changes: Map<String, SettingValue>,
+    ): Map<String, SettingValue> {
+        calls += "updateAppSettings $index"
+        return updateAppSettings.invoke(index, changes)
     }
 
     companion object {

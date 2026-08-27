@@ -4,6 +4,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.mrquentinet.matrixcontroller.R
 import com.mrquentinet.matrixcontroller.data.store.DataStoreBoardRepository
 import com.mrquentinet.matrixcontroller.data.store.PlaintextSecretCipher
+import com.mrquentinet.matrixcontroller.domain.AppSettingSchema
 import com.mrquentinet.matrixcontroller.domain.Board
 import com.mrquentinet.matrixcontroller.domain.BoardApp
 import com.mrquentinet.matrixcontroller.domain.BoardApps
@@ -14,6 +15,7 @@ import com.mrquentinet.matrixcontroller.domain.BoardMetrics
 import com.mrquentinet.matrixcontroller.domain.BoardStatus
 import com.mrquentinet.matrixcontroller.domain.DeviceInfo
 import com.mrquentinet.matrixcontroller.domain.MatrixApi
+import com.mrquentinet.matrixcontroller.domain.SettingValue
 import com.mrquentinet.matrixcontroller.ui.common.FieldError
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -80,6 +82,21 @@ private class FakeMatrixApi : MatrixApi {
         credentials: BoardCredentials,
         index: Int,
     ): BoardApp = throw AssertionError("unexpected setActiveApp call")
+
+    override suspend fun appSettings(
+        board: Board,
+        credentials: BoardCredentials,
+        index: Int,
+        schema: List<AppSettingSchema>,
+    ): Map<String, SettingValue> = throw AssertionError("unexpected appSettings call")
+
+    override suspend fun updateAppSettings(
+        board: Board,
+        credentials: BoardCredentials,
+        index: Int,
+        schema: List<AppSettingSchema>,
+        changes: Map<String, SettingValue>,
+    ): Map<String, SettingValue> = throw AssertionError("unexpected updateAppSettings call")
 
     override suspend fun metrics(board: Board, credentials: BoardCredentials): BoardMetrics? =
         throw AssertionError("unexpected metrics call")

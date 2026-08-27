@@ -1,6 +1,6 @@
 package com.mrquentinet.matrixcontroller.domain
 
-data class BoardApp(val index: Int, val name: String)
+data class BoardApp(val index: Int, val name: String, val settings: List<AppSettingSchema> = emptyList())
 
 /**
  * The board reports the active app as a top-level index, not as a per-item flag

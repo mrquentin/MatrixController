@@ -8,7 +8,10 @@ import com.mrquentinet.matrixcontroller.data.api.dto.ErrorDto
 import com.mrquentinet.matrixcontroller.data.api.dto.MetricsDto
 import com.mrquentinet.matrixcontroller.data.api.dto.PairDto
 import com.mrquentinet.matrixcontroller.data.api.dto.StatusDto
+import com.mrquentinet.matrixcontroller.data.api.dto.encodeSettingChanges
+import com.mrquentinet.matrixcontroller.data.api.dto.parseSettingValues
 import com.mrquentinet.matrixcontroller.data.api.dto.toDomain
+import com.mrquentinet.matrixcontroller.domain.AppSettingSchema
 import com.mrquentinet.matrixcontroller.domain.Board
 import com.mrquentinet.matrixcontroller.domain.BoardApp
 import com.mrquentinet.matrixcontroller.domain.BoardApps
@@ -19,6 +22,7 @@ import com.mrquentinet.matrixcontroller.domain.BoardMetrics
 import com.mrquentinet.matrixcontroller.domain.BoardStatus
 import com.mrquentinet.matrixcontroller.domain.DeviceInfo
 import com.mrquentinet.matrixcontroller.domain.MatrixApi
+import com.mrquentinet.matrixcontroller.domain.SettingValue
 import java.io.IOException
 import java.net.ConnectException
 import java.net.SocketTimeoutException
@@ -82,6 +86,31 @@ class OkHttpMatrixApi(
             credentials = credentials,
         )?.toDomain()
 
+    // Heterogeneous bool/int/string JSON objects, not a fixed shape — bypass the `call`/`decode`
+    // helpers and parse/encode via the schema directly.
+    override suspend fun appSettings(
+        board: Board,
+        credentials: BoardCredentials,
+        index: Int,
+        schema: List<AppSettingSchema>,
+    ): Map<String, SettingValue> {
+        val payload = execute(board, "/api/apps/$index/settings", "GET", credentials, null)
+        return parseSettingValues(json, schema, payload)
+    }
+
+    override suspend fun updateAppSettings(
+        board: Board,
+        credentials: BoardCredentials,
+        index: Int,
+        schema: List<AppSettingSchema>,
+        changes: Map<String, SettingValue>,
+    ): Map<String, SettingValue> {
+        val body = encodeSettingChanges(json, changes)
+        val payload = execute(board, "/api/apps/$index/settings", "POST", credentials, body)
+        // Atomic on the board and mirrors the GET shape on success — the caller's new baseline.
+        return parseSettingValues(json, schema, payload)
+    }
+
     private suspend fun <T> call(
         board: Board,
         target: String,
@@ -117,6 +146,11 @@ class OkHttpMatrixApi(
         method: String,
         credentials: BoardCredentials?,
         bodyJson: String?,
+        // The board's per-client timestamp high-water mark and 24-entry nonce cache mean a
+        // `stale_timestamp`/`replay_detected` can be a genuine one-off (clock drift settling,
+        // a nonce collision) rather than a real client bug — retry exactly once with a fresh
+        // ts/nonce (built fresh below on every call) before surfacing it.
+        allowAuthRetry: Boolean = true,
     ): String = withContext(Dispatchers.IO) {
         val bodyBytes = bodyJson?.toByteArray(Charsets.UTF_8) ?: EMPTY_BODY
         val builder = Request.Builder().url(board.baseUrl + target)
@@ -157,6 +191,18 @@ class OkHttpMatrixApi(
 
         if (code !in 200..299) {
             val error = mapError(code, errorCode(payload))
+            if (allowAuthRetry && credentials != null &&
+                (error == BoardError.ClockSkew || error == BoardError.ReplayRejected)
+            ) {
+                Log.w(
+                    BOARD_HTTP_LOG_TAG,
+                    "$method $target -> $error after ${elapsedMs}ms, retrying once with a " +
+                        "fresh timestamp/nonce",
+                )
+                return@withContext execute(
+                    board, target, method, credentials, bodyJson, allowAuthRetry = false,
+                )
+            }
             // The error envelope is always just {"error":"<code>"} — never a secret — safe to log
             // in full. 2xx bodies are deliberately NOT logged in full: /pair's response carries
             // the 64-hex board secret.
@@ -203,13 +249,23 @@ class OkHttpMatrixApi(
     }
 }
 
+/**
+ * `bad_signature` deliberately falls through to [BoardError.Server] rather than joining
+ * `unknown_client` under [BoardError.CredentialsRejected]: it means the client's own signing is
+ * wrong (a dev-facing bug), not that the board revoked a real pairing, and callers auto-clear
+ * stored credentials on [BoardError.CredentialsRejected] — doing that for a signing bug would
+ * destroy valid credentials while masking the actual defect.
+ */
 internal fun mapError(httpCode: Int, code: String?): BoardError = when (code) {
     "pairing_closed" -> BoardError.PairingClosed
     "too_many_clients" -> BoardError.TooManyClients
-    "unknown_client", "bad_signature" -> BoardError.CredentialsRejected
+    "unknown_client" -> BoardError.CredentialsRejected
     "stale_timestamp" -> BoardError.ClockSkew
     "replay_detected" -> BoardError.ReplayRejected
     "clock_unavailable" -> BoardError.BoardClockUnavailable
     "unknown_endpoint" -> BoardError.EndpointMissing
+    "invalid_setting_value" -> BoardError.InvalidSettingValue
+    "no_recognized_settings" -> BoardError.NoRecognizedSettings
+    "unknown_app_index" -> BoardError.UnknownAppIndex
     else -> BoardError.Server(httpCode, code)
 }

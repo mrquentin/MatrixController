@@ -6,9 +6,11 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.mrquentinet.matrixcontroller.R
@@ -28,7 +30,10 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** The core interaction: the active app is the selected list item, and tapping another switches. */
+/**
+ * The core interactions: the active app is the selected list item; a short press opens that
+ * app's settings; a long press makes it the active app.
+ */
 @RunWith(AndroidJUnit4::class)
 class BoardScreenTest {
 
@@ -49,11 +54,19 @@ class BoardScreenTest {
         repository.saveCredentials(boardId, TEST_CREDENTIALS)
     }
 
-    private fun start(onOpenInfo: (String) -> Unit = {}) {
+    private fun start(
+        onOpenInfo: (String) -> Unit = {},
+        onOpenAppSettings: (String, Int) -> Unit = { _, _ -> },
+    ) {
         rule.setContent {
             val viewModel = remember { BoardViewModel(boardId, repository, api) }
             MatrixControllerTheme {
-                BoardScreen(viewModel = viewModel, onBack = {}, onOpenInfo = onOpenInfo)
+                BoardScreen(
+                    viewModel = viewModel,
+                    onBack = {},
+                    onOpenInfo = onOpenInfo,
+                    onOpenAppSettings = onOpenAppSettings,
+                )
             }
         }
     }
@@ -68,7 +81,7 @@ class BoardScreenTest {
     }
 
     @Test
-    fun tappingAnInactiveAppSwitchesTheBoardAndMovesTheSelection() {
+    fun longPressingAnInactiveAppSwitchesTheBoardAndMovesTheSelection() {
         // The board is the source of truth for what became active.
         api.setActiveApp = { index ->
             api.apps = { BoardApps(FakeMatrixApi.DEFAULT_APPS, activeIndex = index) }
@@ -76,7 +89,7 @@ class BoardScreenTest {
         }
         start()
 
-        rule.onNode(hasText("Weather")).performClick()
+        rule.onNode(hasText("Weather")).performTouchInput { longClick() }
 
         rule.onNode(hasText("Weather")).assertIsSelected()
         rule.onNode(hasText("Clock")).assertIsNotSelected()
@@ -84,15 +97,32 @@ class BoardScreenTest {
     }
 
     @Test
-    fun theSelectionFollowsTheBoardNotTheTap() {
+    fun theSelectionFollowsTheBoardNotTheLongPress() {
         // The board refuses the switch and reports index 0 as still active.
         api.setActiveApp = { BoardApp(0, "Clock") }
         start()
 
-        rule.onNode(hasText("Weather")).performClick()
+        rule.onNode(hasText("Weather")).performTouchInput { longClick() }
 
         rule.onNode(hasText("Clock")).assertIsSelected()
         rule.onNode(hasText("Weather")).assertIsNotSelected()
+    }
+
+    @Test
+    fun tappingAnAppOpensItsSettingsWithoutSwitchingIt() {
+        var openedBoardId: String? = null
+        var openedIndex: Int? = null
+        start(onOpenAppSettings = { id, index ->
+            openedBoardId = id
+            openedIndex = index
+        })
+
+        rule.onNode(hasText("Weather")).performClick()
+
+        assertEquals(boardId, openedBoardId)
+        assertEquals(1, openedIndex)
+        // A short press never issues the board's active-app switch call.
+        assertEquals(listOf("apps"), api.calls)
     }
 
     @Test
