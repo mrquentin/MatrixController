@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Dark counterpart of values/themes.xml — see that file for why this exists. The splash
+         background matches the launcher icon's own background (ic_launcher_background.xml) so the
+         icon doesn't visibly "pop" onto a mismatched panel behind it. -->
+    <style name="Theme.MatrixController" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowSplashScreenBackground">#12121F</item>
+        <item name="android:colorBackground">#12121F</item>
+    </style>
+</resources>

@@ -2,10 +2,13 @@ package com.mrquentinet.matrixcontroller.data.api
 
 import com.mrquentinet.matrixcontroller.core.hexToBytes
 import com.mrquentinet.matrixcontroller.core.toHexLower
+import com.mrquentinet.matrixcontroller.domain.AppSettingSchema
+import com.mrquentinet.matrixcontroller.domain.AppSettingType
 import com.mrquentinet.matrixcontroller.domain.Board
 import com.mrquentinet.matrixcontroller.domain.BoardCredentials
 import com.mrquentinet.matrixcontroller.domain.BoardError
 import com.mrquentinet.matrixcontroller.domain.BoardException
+import com.mrquentinet.matrixcontroller.domain.SettingValue
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import kotlinx.coroutines.test.runTest
@@ -105,15 +108,25 @@ class OkHttpMatrixApiTest {
 
     @Test
     fun `maps the firmware's authentication and clock error codes`() = runTest {
+        // stale_timestamp/replay_detected retry once before surfacing (fresh ts/nonce) — enqueue
+        // two identical failures so the retry doesn't consume a later assertion's response.
+        server.enqueue(MockResponse(code = 401, body = """{"error":"stale_timestamp"}"""))
         server.enqueue(MockResponse(code = 401, body = """{"error":"stale_timestamp"}"""))
         assertEquals(BoardError.ClockSkew, errorFrom { api.status(board, credentials) })
 
         server.enqueue(MockResponse(code = 401, body = """{"error":"unknown_client"}"""))
         assertEquals(BoardError.CredentialsRejected, errorFrom { api.status(board, credentials) })
 
+        // bad_signature means the client's own signing is wrong, not that the board revoked a
+        // real pairing — it must NOT be folded into CredentialsRejected, or a signing bug would
+        // silently wipe valid credentials and mask the real defect.
         server.enqueue(MockResponse(code = 401, body = """{"error":"bad_signature"}"""))
-        assertEquals(BoardError.CredentialsRejected, errorFrom { api.apps(board, credentials) })
+        assertEquals(
+            BoardError.Server(401, "bad_signature"),
+            errorFrom { api.apps(board, credentials) },
+        )
 
+        server.enqueue(MockResponse(code = 401, body = """{"error":"replay_detected"}"""))
         server.enqueue(MockResponse(code = 401, body = """{"error":"replay_detected"}"""))
         assertEquals(BoardError.ReplayRejected, errorFrom { api.apps(board, credentials) })
 
@@ -257,6 +270,113 @@ class OkHttpMatrixApiTest {
         assertEquals(42L, info.pairingExpiresInSeconds)
         assertEquals("dev", info.firmwareVersion)
         assertNull(server.takeRequest().headers["Authorization"])
+    }
+
+    @Test
+    fun `appSettings decodes each value using the schema's declared type`() = runTest {
+        val schema = listOf(
+            AppSettingSchema("color", "Text color", AppSettingType.ColorType, min = 0, max = 16_777_215),
+            AppSettingSchema("size", "Text scale", AppSettingType.IntType, min = 1, max = 2),
+        )
+        server.enqueue(MockResponse(code = 200, body = """{"color":46335,"size":1}"""))
+
+        val values = api.appSettings(board, credentials, 0, schema)
+
+        assertEquals(SettingValue.IntValue(46_335), values["color"])
+        assertEquals(SettingValue.IntValue(1), values["size"])
+        val request = server.takeRequest()
+        assertEquals("GET", request.method)
+        assertEquals("/api/apps/0/settings", request.target)
+    }
+
+    @Test
+    fun `appSettings falls back to a raw value when the JSON shape does not match the schema`() =
+        runTest {
+            // An array where a string is declared — never a JsonPrimitive, so it can never be
+            // coerced into a bool/int/string and must render read-only instead of crashing.
+            val schema = listOf(AppSettingSchema("text", "Display text", AppSettingType.StringType))
+            server.enqueue(MockResponse(code = 200, body = """{"text":[1,2,3]}"""))
+
+            val values = api.appSettings(board, credentials, 1, schema)
+
+            assertEquals(SettingValue.RawValue("[1,2,3]"), values["text"])
+        }
+
+    @Test
+    fun `updateAppSettings posts only the given keys and returns the applied map`() = runTest {
+        val schema = listOf(
+            AppSettingSchema("color", "Text color", AppSettingType.ColorType, min = 0, max = 16_777_215),
+            AppSettingSchema("size", "Text scale", AppSettingType.IntType, min = 1, max = 2),
+        )
+        server.enqueue(MockResponse(code = 200, body = """{"color":16711680,"size":2}"""))
+
+        val applied = api.updateAppSettings(
+            board, credentials, 1, schema, mapOf("size" to SettingValue.IntValue(2)),
+        )
+
+        val request = server.takeRequest()
+        assertEquals("POST", request.method)
+        assertEquals("/api/apps/1/settings", request.target)
+        assertEquals("""{"size":2}""", request.body?.utf8())
+        assertEquals(SettingValue.IntValue(16_711_680), applied["color"])
+        assertEquals(SettingValue.IntValue(2), applied["size"])
+    }
+
+    @Test
+    fun `retries once with a fresh nonce and timestamp on stale_timestamp, then succeeds`() =
+        runTest {
+            server.enqueue(MockResponse(code = 401, body = """{"error":"stale_timestamp"}"""))
+            server.enqueue(
+                MockResponse(
+                    code = 200,
+                    body = """{"uptime_s":1,"led":false,"rssi":-50,"paired_clients":1,"time":1}""",
+                )
+            )
+
+            val status = api.status(board, credentials)
+
+            assertEquals(1L, status.uptimeSeconds)
+            val first = server.takeRequest()
+            val second = server.takeRequest()
+            val firstNonce = first.headers["Authorization"]!!.substringAfter("nonce=").substringBefore(',')
+            val secondNonce = second.headers["Authorization"]!!.substringAfter("nonce=").substringBefore(',')
+            assertTrue("retry must sign with a fresh nonce", firstNonce != secondNonce)
+        }
+
+    @Test
+    fun `gives up after exactly one retry`() = runTest {
+        server.enqueue(MockResponse(code = 401, body = """{"error":"replay_detected"}"""))
+        server.enqueue(MockResponse(code = 401, body = """{"error":"replay_detected"}"""))
+
+        assertEquals(BoardError.ReplayRejected, errorFrom { api.status(board, credentials) })
+        assertEquals(2, server.requestCount)
+    }
+
+    @Test
+    fun `maps the settings-specific error codes`() = runTest {
+        val schema = listOf(AppSettingSchema("size", "Text scale", AppSettingType.IntType, min = 1, max = 2))
+
+        server.enqueue(MockResponse(code = 400, body = """{"error":"invalid_setting_value"}"""))
+        assertEquals(
+            BoardError.InvalidSettingValue,
+            errorFrom {
+                api.updateAppSettings(board, credentials, 0, schema, mapOf("size" to SettingValue.IntValue(9)))
+            },
+        )
+
+        server.enqueue(MockResponse(code = 400, body = """{"error":"no_recognized_settings"}"""))
+        assertEquals(
+            BoardError.NoRecognizedSettings,
+            errorFrom {
+                api.updateAppSettings(board, credentials, 0, schema, mapOf("ghost" to SettingValue.IntValue(1)))
+            },
+        )
+
+        server.enqueue(MockResponse(code = 404, body = """{"error":"unknown_app_index"}"""))
+        assertEquals(
+            BoardError.UnknownAppIndex,
+            errorFrom { api.appSettings(board, credentials, 99, schema) },
+        )
     }
 
     private suspend fun errorFrom(call: suspend () -> Any?): BoardError {

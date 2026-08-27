@@ -8,10 +8,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.mrquentinet.matrixcontroller.R
@@ -30,16 +33,33 @@ fun BoardRow(
         supportingContent = { Text(statusLine(row)) },
         leadingContent = { StatusDot(row.probe) },
         trailingContent = { Icon(Icons.Rounded.ChevronRight, contentDescription = null) },
+        // The default M3 alignment top-aligns leading/trailing content once a ListItem grows past
+        // two lines (overline + headline + supporting here), which is what left the status dot and
+        // chevron sitting above centre. Pin it explicitly.
+        verticalAlignment = Alignment.CenterVertically,
+        // Default ListItem container colour/shape/elevation is flat (surface, ~4dp corner, 0dp
+        // elevation) — indistinguishable from the screen background. Give each row a tonal,
+        // rounded card so the list reads as distinct tappable tiles.
+        shapes = ListItemDefaults.shapes(shape = MaterialTheme.shapes.large),
+        colors = ListItemDefaults.colors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
         content = { Text(row.board.name) },
     )
 }
 
+// Traffic-light semantics (reachable/checking/unreachable) need to read the same regardless of
+// wallpaper-derived dynamic colour, so these are fixed rather than pulled from MaterialTheme.
+private val StatusOnlineColor = Color(0xFF34A853)
+private val StatusProbingColor = Color(0xFFF9AB00)
+private val StatusOfflineColor = Color(0xFFD93025)
+
 @Composable
 private fun StatusDot(probe: ProbeState) {
     val color = when (probe) {
-        ProbeState.Probing -> MaterialTheme.colorScheme.outline
-        ProbeState.Offline -> MaterialTheme.colorScheme.error
-        is ProbeState.Online -> MaterialTheme.colorScheme.primary
+        ProbeState.Probing -> StatusProbingColor
+        ProbeState.Offline -> StatusOfflineColor
+        is ProbeState.Online -> StatusOnlineColor
     }
     Box(Modifier.size(12.dp).background(color, CircleShape))
 }

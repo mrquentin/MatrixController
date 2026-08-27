@@ -11,7 +11,10 @@ sealed interface BoardError {
     /** 409 `too_many_clients` — the board already holds its maximum of 4 clients. */
     data object TooManyClients : BoardError
 
-    /** 401 `unknown_client` or `bad_signature` — stored credentials no longer work. */
+    /** 401 `unknown_client` — the board revoked this pairing. `bad_signature` is deliberately
+     *  *not* folded in here: that code means the client's own signing is wrong (a dev-facing
+     *  bug), and auto-clearing valid credentials over it would mask the real bug. It falls
+     *  through `mapError` to [Server] instead. */
     data object CredentialsRejected : BoardError
 
     /** 401 `stale_timestamp` — the phone clock is more than 60 s off the board's. */
@@ -25,6 +28,16 @@ sealed interface BoardError {
 
     /** 404 `unknown_endpoint`. */
     data object EndpointMissing : BoardError
+
+    /** 400 `invalid_setting_value` — `POST /api/apps/<index>/settings` rejected a value. */
+    data object InvalidSettingValue : BoardError
+
+    /** 400 `no_recognized_settings` — every key in a settings update was unrecognized; the
+     *  locally-held schema is stale. */
+    data object NoRecognizedSettings : BoardError
+
+    /** 404 `unknown_app_index` — the app index no longer exists on the board. */
+    data object UnknownAppIndex : BoardError
 
     /** No credentials stored for this board. */
     data object NotPaired : BoardError

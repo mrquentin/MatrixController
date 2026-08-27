@@ -1,6 +1,8 @@
 package com.mrquentinet.matrixcontroller.ui.board
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -10,12 +12,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -42,6 +47,7 @@ fun BoardScreen(
     viewModel: BoardViewModel,
     onBack: () -> Unit,
     onOpenInfo: (String) -> Unit,
+    onOpenAppSettings: (boardId: String, appIndex: Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -75,7 +81,6 @@ fun BoardScreen(
         topBar = {
             MediumFlexibleTopAppBar(
                 title = { Text(board?.name ?: stringResource(R.string.app_name)) },
-                subtitle = { Text(board?.displayAddress ?: "") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -123,14 +128,22 @@ fun BoardScreen(
                 onRefresh = viewModel::refresh,
                 modifier = contentModifier,
             ) {
-                LazyColumn(Modifier.fillMaxSize()) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
                     items(current.apps, key = { it.index }) { app ->
                         val active = app.index == current.activeIndex
                         ListItem(
                             // `selected` is what gives the active app the expressive selected
                             // list-item treatment; do not hand-roll a background colour.
                             selected = active,
-                            onClick = { viewModel.selectApp(app.index) },
+                            // Short press opens the schema-driven settings form; long press is
+                            // the "make this the active app" action (was previously the click).
+                            onClick = { onOpenAppSettings(current.board.id, app.index) },
+                            onLongClick = { viewModel.selectApp(app.index) },
+                            onLongClickLabel = stringResource(R.string.action_set_active_app),
                             enabled = current.switchingToIndex == null,
                             supportingContent = if (active) {
                                 { Text(stringResource(R.string.app_active)) }
@@ -147,7 +160,9 @@ fun BoardScreen(
                                 active -> {
                                     { Icon(Icons.Rounded.CheckCircle, contentDescription = null) }
                                 }
-                                else -> null
+                                else -> {
+                                    { Icon(Icons.Rounded.ChevronRight, contentDescription = null) }
+                                }
                             },
                             content = { Text(app.name) },
                         )

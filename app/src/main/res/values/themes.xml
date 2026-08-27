@@ -1,5 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.MatrixController" parent="android:Theme.Material.Light.NoActionBar" />
+    <!--
+      This theme only governs the sliver of window before Compose starts drawing — the initial
+      window background and the Android 12+ SplashScreen (minSdk 37, so the platform API is
+      always available; no core-splashscreen compat library needed). Everything after that is
+      MatrixControllerTheme (Compose), which already reacts to isSystemInDarkTheme(). Without a
+      values-night override this resolved to Theme.Material.Light unconditionally, so the splash
+      background stayed white even in system dark mode — hence the explicit windowSplashScreenBackground
+      here and the dark counterpart in values-night/themes.xml.
+    -->
+    <style name="Theme.MatrixController" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowSplashScreenBackground">#FAFAFC</item>
+        <item name="android:colorBackground">#FAFAFC</item>
+    </style>
 </resources>

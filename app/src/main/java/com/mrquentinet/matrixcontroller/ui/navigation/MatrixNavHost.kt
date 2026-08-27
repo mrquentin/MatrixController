@@ -7,6 +7,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.mrquentinet.matrixcontroller.AppContainer
+import com.mrquentinet.matrixcontroller.ui.board.AppSettingsScreen
+import com.mrquentinet.matrixcontroller.ui.board.AppSettingsViewModel
 import com.mrquentinet.matrixcontroller.ui.board.BoardScreen
 import com.mrquentinet.matrixcontroller.ui.board.BoardViewModel
 import com.mrquentinet.matrixcontroller.ui.boards.BoardsScreen
@@ -33,6 +35,15 @@ fun MatrixNavHost(container: AppContainer, modifier: Modifier = Modifier) {
                 viewModel = viewModel(factory = BoardViewModel.factory(container)),
                 onBack = { navController.popBackStack() },
                 onOpenInfo = { boardId -> navController.navigate(RouteBoardInfo(boardId)) },
+                onOpenAppSettings = { boardId, appIndex ->
+                    navController.navigate(RouteAppSettings(boardId, appIndex))
+                },
+            )
+        }
+        composable<RouteAppSettings> {
+            AppSettingsScreen(
+                viewModel = viewModel(factory = AppSettingsViewModel.factory(container)),
+                onBack = { navController.popBackStack() },
             )
         }
         composable<RouteBoardInfo> {

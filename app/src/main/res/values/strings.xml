@@ -57,6 +57,20 @@
     <string name="action_check_again">Check again</string>
     <string name="app_active">Active</string>
 
+    <!-- App settings screen -->
+    <string name="app_settings_subtitle">Settings</string>
+    <string name="action_set_active_app">Set as active app</string>
+    <string name="settings_empty">No configurable settings</string>
+    <string name="action_save">Save</string>
+    <string name="action_retry">Retry</string>
+    <string name="settings_bool_on">On</string>
+    <string name="settings_bool_off">Off</string>
+    <string name="settings_chars_used">%1$d/%2$d</string>
+    <string name="settings_color_channel_r">R</string>
+    <string name="settings_color_channel_g">G</string>
+    <string name="settings_color_channel_b">B</string>
+    <string name="settings_unsupported">Unsupported setting type (%1$s) \u2014 shown read-only</string>
+
     <!-- Info screen -->
     <string name="info_title">Board info</string>
     <string name="info_card_status">Status</string>
@@ -106,4 +120,7 @@
     <string name="error_not_paired">This board is not paired yet.</string>
     <string name="error_server">The board returned an error (%1$d %2$s).</string>
     <string name="error_malformed">The board sent a response the app could not read.</string>
+    <string name="error_invalid_setting_value">Couldn\u2019t save \u2014 one of the values was rejected.</string>
+    <string name="error_no_recognized_settings">This app\u2019s settings changed on the board. Refreshed \u2014 try again.</string>
+    <string name="error_unknown_app_index">This app no longer exists on the board. Refreshed \u2014 try again.</string>
 </resources>
