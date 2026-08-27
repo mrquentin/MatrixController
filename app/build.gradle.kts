@@ -52,6 +52,14 @@ android {
     buildFeatures {
         compose = true
     }
+    testOptions {
+        unitTests {
+            // OkHttpMatrixApi logs the connection lifecycle through android.util.Log, which is
+            // an unmocked stub under plain JVM unit tests and throws by default. This makes
+            // those calls return their default value (a no-op for Log) instead.
+            isReturnDefaultValues = true
+        }
+    }
 }
 
 dependencies {

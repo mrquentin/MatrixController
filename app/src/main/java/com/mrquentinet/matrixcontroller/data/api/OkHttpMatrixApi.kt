@@ -1,5 +1,6 @@
 package com.mrquentinet.matrixcontroller.data.api
 
+import android.util.Log
 import com.mrquentinet.matrixcontroller.data.api.dto.AppDto
 import com.mrquentinet.matrixcontroller.data.api.dto.AppsDto
 import com.mrquentinet.matrixcontroller.data.api.dto.DeviceInfoDto
@@ -19,6 +20,10 @@ import com.mrquentinet.matrixcontroller.domain.BoardStatus
 import com.mrquentinet.matrixcontroller.domain.DeviceInfo
 import com.mrquentinet.matrixcontroller.domain.MatrixApi
 import java.io.IOException
+import java.net.ConnectException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
+import javax.net.ssl.SSLException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.DeserializationStrategy
@@ -128,22 +133,66 @@ class OkHttpMatrixApi(
             )
         }
 
+        val startedAt = System.currentTimeMillis()
+        Log.d(
+            BOARD_HTTP_LOG_TAG,
+            "$method $target -> ${board.baseUrl}$target " +
+                "(authenticated=${credentials != null}, bodyBytes=${bodyBytes.size})",
+        )
+
         val (code, payload) = try {
             client.newCall(builder.build()).execute().use { response ->
                 response.code to response.body.string()
             }
-        } catch (_: IOException) {
-            throw BoardException(BoardError.Unreachable)
+        } catch (e: IOException) {
+            val elapsedMs = System.currentTimeMillis() - startedAt
+            Log.e(
+                BOARD_HTTP_LOG_TAG,
+                "$method $target FAILED after ${elapsedMs}ms: ${describeFailure(e)}",
+                e,
+            )
+            throw BoardException(BoardError.Unreachable, e)
+        }
+        val elapsedMs = System.currentTimeMillis() - startedAt
+
+        if (code !in 200..299) {
+            val error = mapError(code, errorCode(payload))
+            // The error envelope is always just {"error":"<code>"} — never a secret — safe to log
+            // in full. 2xx bodies are deliberately NOT logged in full: /pair's response carries
+            // the 64-hex board secret.
+            Log.w(
+                BOARD_HTTP_LOG_TAG,
+                "$method $target -> HTTP $code after ${elapsedMs}ms, body=$payload -> $error",
+            )
+            throw BoardException(error)
         }
 
-        if (code !in 200..299) throw BoardException(mapError(code, errorCode(payload)))
+        Log.d(
+            BOARD_HTTP_LOG_TAG,
+            "$method $target -> HTTP $code after ${elapsedMs}ms (${payload.length} chars)",
+        )
         payload
+    }
+
+    /** Classifies the transport failure so the log shows *why*, not just that it failed. */
+    private fun describeFailure(e: IOException): String = when (e) {
+        is UnknownHostException -> "DNS lookup failed (UnknownHostException): ${e.message}"
+        is ConnectException -> "connection refused/unreachable (ConnectException): ${e.message}"
+        is SocketTimeoutException -> "timed out (SocketTimeoutException): ${e.message}"
+        is SSLException -> "TLS failure (SSLException) — unexpected, the board is plain HTTP: ${e.message}"
+        else -> "${e::class.java.name}: ${e.message}"
     }
 
     private fun <T> decode(serializer: DeserializationStrategy<T>, payload: String): T = try {
         json.decodeFromString(serializer, payload)
     } catch (e: SerializationException) {
-        throw BoardException(BoardError.Malformed(e.message ?: "unparsable response"))
+        Log.e(
+            BOARD_HTTP_LOG_TAG,
+            "response did not match the expected shape: ${e.message}. " +
+                "payload=${payload.take(300)}",
+            e,
+        )
+        throw BoardException(BoardError.Malformed(e.message ?: "unparsable response"), e)
     }
 
     /** An error body that does not parse is tolerated: the HTTP code alone still classifies it. */

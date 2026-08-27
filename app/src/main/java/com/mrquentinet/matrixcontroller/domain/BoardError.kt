@@ -34,4 +34,11 @@ sealed interface BoardError {
     data class Malformed(val detail: String) : BoardError
 }
 
-class BoardException(val error: BoardError) : Exception(error.toString())
+/**
+ * @param cause the underlying transport exception, when there is one (e.g. the
+ *   [ConnectException][java.net.ConnectException] or
+ *   [SocketTimeoutException][java.net.SocketTimeoutException] behind [BoardError.Unreachable]).
+ *   Preserved so it survives into logs even though [error] is the only thing the UI reads.
+ */
+class BoardException(val error: BoardError, cause: Throwable? = null) :
+    Exception(error.toString(), cause)

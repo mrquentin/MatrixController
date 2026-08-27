@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import com.mrquentinet.matrixcontroller.data.api.BoardConnectionEventListener
 import com.mrquentinet.matrixcontroller.data.api.OkHttpMatrixApi
 import com.mrquentinet.matrixcontroller.data.api.RequestSigner
 import com.mrquentinet.matrixcontroller.data.store.AndroidKeystoreSecretCipher
@@ -34,6 +35,9 @@ class AppContainer(context: Context) {
         .writeTimeout(3, TimeUnit.SECONDS)
         .callTimeout(12, TimeUnit.SECONDS)
         .retryOnConnectionFailure(false)
+        // Logs every phase of every board call (DNS, TCP connect, request, response) with
+        // timing and full exceptions: `adb logcat -s MatrixBoardHttp`.
+        .eventListenerFactory(BoardConnectionEventListener.FACTORY)
         .build()
 
     val matrixApi: MatrixApi = OkHttpMatrixApi(httpClient, json, RequestSigner())

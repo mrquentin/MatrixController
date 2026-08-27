@@ -141,6 +141,45 @@ class OkHttpMatrixApiTest {
     }
 
     @Test
+    fun `an unreachable board preserves the real exception as the cause`() = runTest {
+        // Nothing is listening on this port once the server is closed, so the connection is
+        // refused immediately: a real ConnectException, not a manufactured one.
+        server.close()
+
+        val thrown = try {
+            api.deviceInfo(board)
+            null
+        } catch (e: BoardException) {
+            e
+        }
+
+        assertEquals(BoardError.Unreachable, thrown?.error)
+        assertTrue(
+            "expected the underlying IOException to be preserved as the cause, was ${thrown?.cause}",
+            thrown?.cause is java.io.IOException,
+        )
+    }
+
+    @Test
+    fun `a response that does not parse preserves the serialization exception as the cause`() =
+        runTest {
+            server.enqueue(MockResponse(code = 200, body = "not json"))
+
+            val thrown = try {
+                api.deviceInfo(board)
+                null
+            } catch (e: BoardException) {
+                e
+            }
+
+            assertTrue(thrown?.error is BoardError.Malformed)
+            assertTrue(
+                "expected the SerializationException to be preserved as the cause, was ${thrown?.cause}",
+                thrown?.cause is kotlinx.serialization.SerializationException,
+            )
+        }
+
+    @Test
     fun `signs the exact target and the empty-body hash`() = runTest {
         server.enqueue(
             MockResponse(
